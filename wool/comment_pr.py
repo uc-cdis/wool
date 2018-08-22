@@ -11,6 +11,11 @@ SIGNATURE = (
 )
 
 
+def check_python_version():
+    if sys.version_info.major < 3 or sys.version_info.minor < 6:
+        raise EnvironmentError("wool requires python >= 3.6")
+
+
 def black_comment_text(black_output):
     if black_output:
         return (
@@ -50,6 +55,8 @@ def find_old_comment_url(comments_info):
 
 
 def comment_pr():
+    check_python_version()
+
     try:
         # REPOSITORY should be the organization name, followed by a slash, followed
         # by the name of the specific repo. For example this repository would be
