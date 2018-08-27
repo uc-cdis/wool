@@ -3,12 +3,13 @@
 set -e
 
 if [[ -z $GITHUB_TOKEN ]]; then
-    echo "$GITHUB_TOKEN is unset; exiting"
+    echo '$GITHUB_TOKEN is unset; exiting'
     exit 1
 fi
 
-repo="$1"
-clone_url="git@github.com:uc-cdis/$repo.git"
+org="$1"
+repo="$2"
+clone_url="git@github.com:$org/$repo.git"
 username="PlanXCyborg"
 email="<planxdemo@gmail.com>"
 author="$username $email"
@@ -26,4 +27,4 @@ black .
 git add --update
 git commit -m 'style(blacken): update style for all files' --author "$author"
 git push -u origin style/blacken
-hub pull-request -m 'style/blacken: update style for all files\n\nThis pull request was generated automatically.'
+hub pull-request -m "style/blacken: update style for all files\n\nThis pull request was generated automatically."

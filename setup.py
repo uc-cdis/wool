@@ -8,7 +8,5 @@ setup(
     install_requires=["black>=18.6b4", "requests>=2.19.1,<3.0.0"],
     package_data={},
     scripts=[],
-    entry_points={
-        "console_scripts": ["wool=wool.comment_pr:comment_pr"],
-    },
+    entry_points={"console_scripts": ["wool=wool.comment_pr:comment_pr"]},
 )

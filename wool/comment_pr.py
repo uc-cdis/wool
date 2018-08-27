@@ -83,10 +83,12 @@ def comment_pr():
 
     output = []
     write = output.append
-    for file_info in files:
+    python_files = [f for f in files if f["filename"].endswith(".py")]
+    if not python_files:
+        print("no python files to check")
+        return
+    for file_info in python_files:
         filename = file_info["filename"]
-        if not filename.endswith(".py"):
-            continue
         raw_url = file_info["raw_url"]
         raw_contents = requests.get(raw_url, headers=headers).text
         black = subprocess.run(
