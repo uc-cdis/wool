@@ -87,6 +87,8 @@ def comment_pr():
     if not python_files:
         print("no python files to check")
         return
+    files_str = "\n".join("    {}".format(f["filename"]) for f in files)
+    print("checking files:\n{}".format(files_str))
     for file_info in python_files:
         filename = file_info["filename"]
         raw_url = file_info["raw_url"]
