@@ -68,6 +68,8 @@ def comment_pr():
     except KeyError:
         raise EnvironmentError("missing environment variables")
 
+    print(f"running wool for {repo}, PR #{pr_number}")
+
     base_url = "https://api.github.com/repos/{}".format(repo)
     pr_url = base_url + "/pulls/{}".format(pr_number)
     issue_url = base_url + "/issues/{}".format(pr_number)  # for comments
