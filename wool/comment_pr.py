@@ -78,6 +78,9 @@ def comment_pr():
     headers = {"Authorization": "token {}".format(github_token)}
 
     files = requests.get(pr_files_url, headers=headers).json()
+    if not isinstance(files, list):
+        print(files)
+        raise Exception("Unable to get PR files")
     files_raw_urls = [file_info["raw_url"] for file_info in files]
     files_raw_contents = [
         requests.get(url, headers=headers).text for url in files_raw_urls
