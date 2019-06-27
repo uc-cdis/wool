@@ -61,7 +61,9 @@ def comment_pr():
         # REPOSITORY should be the organization name, followed by a slash, followed
         # by the name of the specific repo. For example this repository would be
         # "uc-cdis/wool".
-        repo = os.environ["REPOSITORY"]
+        repo = os.environ.get("GITHUB_REPOSITORY") or os.environ.get("REPOSITORY")
+        if not repo:
+            raise EnvironmentError("missing GITHUB_REPOSITORY environment variable")
         repo = repo.strip("/")
         pr_number = os.environ["PR_NUMBER"]
         github_token = os.environ["GITHUB_TOKEN"]
