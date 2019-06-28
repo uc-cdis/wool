@@ -73,13 +73,13 @@ class GitHubInfo(object):
                 self.base_url = re.sub("/pulls.*$", "", self.pr_url) # eww
             else:
                 self.repo = os.environ.get("REPOSITORY")
-                if not repo:
-                    repo = os.environ["GITHUB_REPOSITORY"]
-                self.repo = repo.strip("/")
+                if not self.repo:
+                    self.repo = os.environ["GITHUB_REPOSITORY"]
+                self.repo = self.repo.strip("/")
                 self.pr_number = os.environ["PR_NUMBER"]
-                self.base_url = "https://api.github.com/repos/{}".format(repo)
-                self.pr_url = base_url + "/pulls/{}".format(pr_number)
-                issue_url = base_url + "/issues/{}".format(pr_number)  # for comments
+                self.base_url = "https://api.github.com/repos/{}".format(self.repo)
+                self.pr_url = self.base_url + "/pulls/{}".format(self.pr_number)
+                issue_url = self.base_url + "/issues/{}".format(self.pr_number)  # for comments
                 self.comments_url = issue_url + "/comments"
             self.pr_files_url = self.pr_url + "/files"
             self.headers = {"Authorization": "token {}".format(self.github_token)}
