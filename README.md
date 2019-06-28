@@ -49,3 +49,21 @@ This PR contains code that is not formatted correctly according to [`black`](htt
 
 This formatting comment was generated automatically by a script in [uc-cdis/wool](https://github.com/uc-cdis/wool).
 ````
+
+## Automatically Comment GitHub PRs with a GitHub action workflow
+
+
+Wool can be added as an action in a GitHub action workflow to automatically comment on GitHub pull
+requests to suggest formatting changes.
+
+```
+workflow "Run python formatter" {
+  on = "pull_request"
+  resolves = ["Run wool"]
+}
+
+action "Run wool" {
+  uses = "uc-cdis/wool@master"
+  secrets = ["GITHUB_TOKEN"]
+}
+```
