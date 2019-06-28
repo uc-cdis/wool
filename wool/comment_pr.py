@@ -132,7 +132,7 @@ def comment_pr():
     comment_body = black_comment_text(full_output)
     comments_info = requests.get(github.comments_url, headers=github.headers).json()
     old_comment = find_old_comment(comments_info)
-    old_comment_url = old_comment["url"]
+    old_comment_url = old_comment.get("url")
     if not old_comment_url:
         response = requests.post(
             github.comments_url, json={"body": comment_body}, headers=github.headers
