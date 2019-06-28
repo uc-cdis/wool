@@ -70,7 +70,7 @@ class GitHubInfo(object):
                 self.pr_url = data["pull_request"]["url"]
                 issue_url = data["pull_request"]["issue_url"]
                 self.comments_url = issue_url + "/comments"
-                self.base_url = re.sub("/pulls.*$", "", self.pr_url) # eww
+                self.base_url = re.sub("/pulls.*$", "", self.pr_url)  # eww
             else:
                 self.repo = os.environ.get("REPOSITORY")
                 if not self.repo:
@@ -79,7 +79,9 @@ class GitHubInfo(object):
                 self.pr_number = os.environ["PR_NUMBER"]
                 self.base_url = "https://api.github.com/repos/{}".format(self.repo)
                 self.pr_url = self.base_url + "/pulls/{}".format(self.pr_number)
-                issue_url = self.base_url + "/issues/{}".format(self.pr_number)  # for comments
+                issue_url = self.base_url + "/issues/{}".format(
+                    self.pr_number
+                )  # for comments
                 self.comments_url = issue_url + "/comments"
             self.pr_files_url = self.pr_url + "/files"
             self.headers = {"Authorization": "token {}".format(self.github_token)}
@@ -109,7 +111,7 @@ def comment_pr():
         return
     files_str = "\n".join("    {}".format(f["filename"]) for f in files)
     print("checking files:\n{}".format(files_str))
-    status = "success" # switch to failure if diff found
+    status = "success"  # switch to failure if diff found
     for file_info in python_files:
         filename = file_info["filename"]
         raw_url = file_info["raw_url"]
