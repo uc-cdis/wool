@@ -132,6 +132,7 @@ def comment_pr():
     comment_body = black_comment_text(full_output)
     comments_info = requests.get(github.comments_url, headers=github.headers).json()
     old_comment = find_old_comment(comments_info)
+    status_target_url = None
     if not old_comment:
         response = requests.post(
             github.comments_url, json={"body": comment_body}, headers=github.headers
@@ -140,6 +141,7 @@ def comment_pr():
             print("failed to write comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
             return
+        status_target_url = response.json()["html_url"]
     else:
         old_comment_url = old_comment.get("url")
         response = requests.patch(
@@ -149,6 +151,7 @@ def comment_pr():
             print("failed to edit comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
             return
+        status_target_url = old_comment["html_url"]
 
     # add status check to the pull request
     pr_info = requests.get(github.pr_url, headers=github.headers).json()
@@ -156,7 +159,7 @@ def comment_pr():
     description = "Very stylish" if status == "success" else "Needs formatting"
     status_body = {
         "state": status,
-        "target_url": old_comment["html_url"],
+        "target_url": status_target_url,
         "description": description,
         "context": "wool",
     }
