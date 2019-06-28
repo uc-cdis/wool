@@ -70,16 +70,18 @@ class GitHubInfo(object):
                 self.pr_url = data["pull_request"]["url"]
                 issue_url = data["pull_request"]["issue_url"]
                 self.comments_url = issue_url + "/comments"
-                self.base_url = re.sub("/pulls.*$", "", self.pr_url) # eww
+                self.base_url = re.sub("/pulls.*$", "", self.pr_url)  # eww
             else:
                 self.repo = os.environ.get("REPOSITORY")
-                if not repo:
-                    repo = os.environ["GITHUB_REPOSITORY"]
-                self.repo = repo.strip("/")
+                if not self.repo:
+                    self.repo = os.environ["GITHUB_REPOSITORY"]
+                self.repo = self.repo.strip("/")
                 self.pr_number = os.environ["PR_NUMBER"]
-                self.base_url = "https://api.github.com/repos/{}".format(repo)
-                self.pr_url = base_url + "/pulls/{}".format(pr_number)
-                issue_url = base_url + "/issues/{}".format(pr_number)  # for comments
+                self.base_url = "https://api.github.com/repos/{}".format(self.repo)
+                self.pr_url = self.base_url + "/pulls/{}".format(self.pr_number)
+                issue_url = self.base_url + "/issues/{}".format(
+                    self.pr_number
+                )  # for comments
                 self.comments_url = issue_url + "/comments"
             self.pr_files_url = self.pr_url + "/files"
             self.headers = {"Authorization": "token {}".format(self.github_token)}
@@ -109,7 +111,7 @@ def comment_pr():
         return
     files_str = "\n".join("    {}".format(f["filename"]) for f in files)
     print("checking files:\n{}".format(files_str))
-    status = "success" # switch to failure if diff found
+    status = "success"  # switch to failure if diff found
     for file_info in python_files:
         filename = file_info["filename"]
         raw_url = file_info["raw_url"]
@@ -132,6 +134,7 @@ def comment_pr():
     comment_body = black_comment_text(full_output)
     comments_info = requests.get(github.comments_url, headers=github.headers).json()
     old_comment = find_old_comment(comments_info)
+    status_target_url = None
     if not old_comment:
         response = requests.post(
             github.comments_url, json={"body": comment_body}, headers=github.headers
@@ -140,6 +143,7 @@ def comment_pr():
             print("failed to write comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
             return
+        status_target_url = response.json()["html_url"]
     else:
         old_comment_url = old_comment.get("url")
         response = requests.patch(
@@ -149,6 +153,7 @@ def comment_pr():
             print("failed to edit comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
             return
+        status_target_url = old_comment["html_url"]
 
     # add status check to the pull request
     pr_info = requests.get(github.pr_url, headers=github.headers).json()
@@ -156,7 +161,7 @@ def comment_pr():
     description = "Very stylish" if status == "success" else "Needs formatting"
     status_body = {
         "state": status,
-        "target_url": old_comment["html_url"],
+        "target_url": status_target_url,
         "description": description,
         "context": "wool",
     }
