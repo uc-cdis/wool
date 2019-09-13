@@ -57,13 +57,19 @@ Wool can be added as an action in a GitHub action workflow to automatically comm
 requests to suggest formatting changes.
 
 ```
-workflow "Run python formatter" {
-  on = "pull_request"
-  resolves = ["Run wool"]
-}
+on: pull_request
 
-action "Run wool" {
-  uses = "uc-cdis/wool@master"
-  secrets = ["GITHUB_TOKEN"]
-}
+name: Run python formatter
+
+jobs:
+  runWool:
+    name: Run wool
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Run wool
+      uses: uc-cdis/wool@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
