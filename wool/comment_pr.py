@@ -89,7 +89,7 @@ class GitHubInfo(object):
             raise EnvironmentError(f"missing environment variable: {e}")
 
 
-def comment_pr():
+def run_black():
     check_python_version()
 
     github = GitHubInfo()
@@ -131,7 +131,15 @@ def comment_pr():
             write(black_output)
 
     full_output = "\n".join(output)
-    comment_body = black_comment_text(full_output)
+    return full_output
+
+
+def comment_pr():
+    """
+    Coment on the PR with formatting that should be fixed
+    """
+    black_output = run_black()
+    comment_body = black_comment_text(black_output)
     comments_info = requests.get(github.comments_url, headers=github.headers).json()
     old_comment = find_old_comment(comments_info)
     status_target_url = None
