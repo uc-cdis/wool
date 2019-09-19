@@ -23,7 +23,8 @@ def black_comment_text(black_output):
         return (
             "This PR contains code that is not formatted correctly according"
             " to [`black`](https://github.com/ambv/black). Run `black` on your"
-            " code before merging.\n"
+            ' code before merging, or comment "wool" or "black" on this PR and'
+            " I will format the code for you.\n"
             "\n"
             "<details>\n"
             "<summary>Expand the full diff to see formatting changes</summary>\n"
@@ -60,13 +61,17 @@ class GitHubInfo(object):
     def __init__(self):
         try:
             self.github_token = os.environ["GITHUB_TOKEN"]
-            # if run in a github workflow this file should exist. otherwise we assume
-            # there will be environment variables specifying the repository and PR
-            # number
+            # if run in a github workflow this file should exist. otherwise
+            # we assume there will be environment variables specifying the
+            # repository and PR number
             workflow_data_path = os.environ.get("GITHUB_EVENT_PATH")
             if workflow_data_path and os.path.exists(workflow_data_path):
                 with open(workflow_data_path, "r") as f:
                     data = json.loads(f.read())
+                print("*********")
+                print("workflow_data")
+                print(data)
+                print("*********")
                 self.pr_url = data["pull_request"]["url"]
                 issue_url = data["pull_request"]["issue_url"]
                 self.comments_url = issue_url + "/comments"
@@ -89,11 +94,21 @@ class GitHubInfo(object):
             raise EnvironmentError(f"missing environment variable: {e}")
 
 
-def run_black():
+def run_black(github, diff_only):
+    """
+    Args:
+        github (GitHubInfo)
+        diff_only (bool): whether to return formatting diff or formatted files
+
+    Returns:
+        dict: file name to formatted contents (or to contents that should be
+        formatted, if diff_only is True)
+    """
     check_python_version()
 
-    github = GitHubInfo()
     print(f"running wool for {github.pr_url}")
+
+    # get files from PR
     files = requests.get(github.pr_files_url, headers=github.headers).json()
     if not isinstance(files, list):
         print(files)
@@ -103,43 +118,64 @@ def run_black():
         requests.get(url, headers=github.headers).text for url in files_raw_urls
     ]
 
-    output = []
-    write = output.append
     python_files = [f for f in files if f["filename"].endswith(".py")]
     if not python_files:
         print("no python files to check")
         return
     files_str = "\n".join("    {}".format(f["filename"]) for f in files)
     print("checking files:\n{}".format(files_str))
-    status = "success"  # switch to failure if diff found
+
+    # run black on the files
+    file_to_black = {}
     for file_info in python_files:
         filename = file_info["filename"]
         raw_url = file_info["raw_url"]
-        raw_contents = requests.get(raw_url, headers=github.headers).text
-        black = subprocess.run(
-            ["black --diff - 2>/dev/null"],
+        response = requests.get(raw_url, headers=github.headers)
+        if response.status_code != 200:
+            raise Exception(
+                "Unable to get file `{}` at `{}`: got code {}.".format(
+                    filename, raw_url, response.status_code
+                )
+            )
+        raw_contents = response.text
+
+        black_command = (
+            "black --diff - 2>/dev/null" if diff_only else "black - 2>/dev/null"
+        )
+        black_result = subprocess.run(
+            [black_command],
             shell=True,
             input=raw_contents,
             encoding="ascii",
             stdout=subprocess.PIPE,
         )
-        black_output = "\n".join(black.stdout.split("\n")[2:])
+
+        if black_result.stdout != raw_contents:
+            file_to_black[filename] = black_result.stdout
+
+    return file_to_black
+
+
+def comment_pr():
+    """
+    Comment on the PR with the formatting that should be fixed
+    """
+    github = GitHubInfo()
+    black_output = run_black(github, diff_only=True)
+
+    output = []
+    write = output.append
+    status = "success"  # switch to failure if diff found
+    for filename, black_diff in black_output.items():
+        black_output = "\n".join(black_diff.split("\n")[2:])
         if black_output:
             status = "failure"
             write("--- {}".format(filename))
             write("+++ blackened")
             write(black_output)
-
     full_output = "\n".join(output)
-    return full_output
 
-
-def comment_pr():
-    """
-    Coment on the PR with formatting that should be fixed
-    """
-    black_output = run_black()
-    comment_body = black_comment_text(black_output)
+    comment_body = black_comment_text(full_output)
     comments_info = requests.get(github.comments_url, headers=github.headers).json()
     old_comment = find_old_comment(comments_info)
     status_target_url = None
@@ -178,3 +214,104 @@ def comment_pr():
         print(f"failed to add status check ({status_url})", file=sys.stderr)
         print(response.json(), file=sys.stderr)
         return
+
+
+def commit_pr():
+    """
+    Create a commit on the PR to fix the formatting
+    """
+    github = GitHubInfo()
+    black_output = run_black(github, diff_only=False)
+
+    if not black_output:
+        print("No changes to commit")
+        return
+
+    # get latest commit on the PR
+    commits_url = "https://api.github.com/repos/paulineribeyre/tests/git/commits"
+    pr_info = requests.get(github.pr_url, headers=github.headers).json()
+    latest_commit_sha = pr_info["head"]["sha"]
+    response = requests.get(
+        commits_url + "/" + latest_commit_sha, headers=github.headers
+    )
+    if response.status_code != 200:
+        print("failed to get latest commit info", file=sys.stderr)
+        print(response.json(), file=sys.stderr)
+        return
+    latest_commit_tree_sha = response.json()["tree"]["sha"]
+
+    # get branch for this commit
+    branch_url = "https://api.github.com/repos/paulineribeyre/tests/commits/{}/branches-where-head".format(
+        latest_commit_sha
+    )
+
+    # endpoint "branches-where-head" is in beta
+    headers = github.headers.copy()
+    headers["Accept"] = "application/vnd.github.groot-preview+json"
+
+    response = requests.get(branch_url, headers=headers)
+    if response.status_code != 200:
+        print("failed to get commit branch", file=sys.stderr)
+        print(response.json(), file=sys.stderr)
+        return
+    branches = response.json()
+
+    if len(branches) != 1:
+        if len(branches) > 1:
+            print(
+                "Commit {} is the head of several branches. I don't know which one to update - exiting early".format(
+                    latest_commit_sha
+                )
+            )
+        else:
+            print(
+                "Commit {} is not the head of the branch. Assuming a new commit has been pushed - exiting early".format(
+                    latest_commit_sha
+                )
+            )
+        return
+
+    branch_name = response.json()[0]["name"]
+
+    # create new tree. it contains the formatted files
+    trees_url = "https://api.github.com/repos/paulineribeyre/tests/git/trees"
+    new_tree_body = {
+        "tree": [
+            {"content": contents, "path": filename, "mode": "100644", "type": "blob"}
+            for filename, contents in black_output.items()
+        ],
+        "base_tree": latest_commit_tree_sha,
+    }
+    response = requests.post(trees_url, headers=github.headers, json=new_tree_body)
+    if response.status_code != 201:
+        print("failed to create new tree", file=sys.stderr)
+        print(response.json(), file=sys.stderr)
+        return
+    new_tree_sha = response.json()["sha"]
+
+    # create new commit
+    new_commit_body = {
+        "tree": new_tree_sha,
+        "parents": [latest_commit_sha],
+        "message": "Wool auto formatting",
+    }
+    response = requests.post(commits_url, headers=github.headers, json=new_commit_body)
+    if response.status_code != 201:
+        print("failed to create new commit", file=sys.stderr)
+        print(response.json(), file=sys.stderr)
+        return
+    new_commit_sha = response.json()["sha"]
+
+    # add the commit to the branch
+    refs_url = (
+        "https://api.github.com/repos/paulineribeyre/tests/git/refs/heads/"
+        + branch_name
+    )
+    new_ref_body = {"sha": new_commit_sha}
+    response = requests.patch(refs_url, headers=github.headers, json=new_ref_body)
+    if response.status_code != 200:
+        print("failed to create new ref", file=sys.stderr)
+        print(response.json(), file=sys.stderr)
+        return
+
+    print("Pushed commit {} to branch {}".format(new_commit_sha, branch_name))
