@@ -343,7 +343,7 @@ def commit_on_pr():
 
     print("Pushed commit {} to branch {}".format(new_commit_sha, branch_name))
 
-    # manually trigger comment update and status check, since wool's
-    # commits don't trigger the pull_request workflow
+    # manually trigger comment update and status check, since actions
+    # in workflows do not trigger new workflow runs
     sleep(3)  # wait for the commit to show up in GitHub...
     comment_on_pr(github)

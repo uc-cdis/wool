@@ -95,3 +95,12 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+Commenting and committing can be enabled in a single workflow by using:
+
+```
+on:
+  pull_request:
+  issue_comment:
+    types: [created, edited]
+```
