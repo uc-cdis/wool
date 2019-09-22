@@ -298,7 +298,7 @@ def commit_on_pr():
             )
         return
 
-    branch_name = response.json()[0]["name"]
+    branch_name = branches[0]["name"]
 
     # create new tree. it contains the formatted files
     trees_url = "https://api.github.com/repos/paulineribeyre/tests/git/trees"

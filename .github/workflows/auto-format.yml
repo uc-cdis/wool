@@ -1,10 +1,12 @@
-on: pull_request
+on:
+  issue_comment:
+    types: [created, edited]
 
 name: Wool
 
 jobs:
   runWool:
-    name: Run black
+    name: Auto format
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
