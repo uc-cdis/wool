@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import sys
+from time import sleep
 
 import requests
 
@@ -11,6 +12,26 @@ SIGNATURE = (
     "This formatting comment was generated automatically by a script in"
     " [uc-cdis/wool](https://github.com/uc-cdis/wool)."
 )
+
+
+ASK_FOR_FORMAT_COMMIT = ["wool", "black", "please format my code"]
+
+
+def main():
+    """
+    When triggered by pull request commits, runs comment_on_pr to comment
+    on the PR with the necessary formatting changes.
+    When triggered by pull request comments, runs commit_on_pr to make a
+    commit with the necessary formatting changes.
+    """
+    event_name = os.environ.get("GITHUB_EVENT_NAME")
+    print("GITHUB_EVENT_NAME:", event_name)
+    if event_name == "issue_comment":
+        commit_on_pr()
+    else:
+        # if not running in a GH workflow or if the workflow was not
+        # triggered by a comment, just comment on the PR
+        comment_on_pr()
 
 
 def check_python_version():
@@ -58,7 +79,7 @@ def find_old_comment(comments_info):
 
 
 class GitHubInfo(object):
-    def __init__(self):
+    def __init__(self, event_type):
         try:
             self.github_token = os.environ["GITHUB_TOKEN"]
             # if run in a github workflow this file should exist. otherwise
@@ -67,15 +88,16 @@ class GitHubInfo(object):
             workflow_data_path = os.environ.get("GITHUB_EVENT_PATH")
             if workflow_data_path and os.path.exists(workflow_data_path):
                 with open(workflow_data_path, "r") as f:
-                    data = json.loads(f.read())
-                print("*********")
-                print("workflow_data")
-                print(data)
-                print("*********")
-                self.pr_url = data["pull_request"]["url"]
-                issue_url = data["pull_request"]["issue_url"]
+                    self.payload = json.loads(f.read())
+                # payload contents doc: https://developer.github.com/v3/activity/events/types
+                event_url = self.payload[event_type]["url"]
+                # if triggered by a PR, event_url is /pulls/
+                # if triggered by a comment, event_url is /issues/
+                # We need both
+                self.pr_url = event_url.replace("/issues/", "/pulls/")
+                issue_url = event_url.replace("/pulls/", "/issues/")
                 self.comments_url = issue_url + "/comments"
-                self.base_url = re.sub("/pulls.*$", "", self.pr_url)  # eww
+                self.base_url = re.sub("/pulls.*$", "", self.pr_url)
             else:
                 self.repo = os.environ.get("REPOSITORY")
                 if not self.repo:
@@ -156,11 +178,11 @@ def run_black(github, diff_only):
     return file_to_black
 
 
-def comment_pr():
+def comment_on_pr(github=None):
     """
     Comment on the PR with the formatting that should be fixed
     """
-    github = GitHubInfo()
+    github = github or GitHubInfo(event_type="pull_request")
     black_output = run_black(github, diff_only=True)
 
     output = []
@@ -216,13 +238,18 @@ def comment_pr():
         return
 
 
-def commit_pr():
+def commit_on_pr():
     """
     Create a commit on the PR to fix the formatting
     """
-    github = GitHubInfo()
-    black_output = run_black(github, diff_only=False)
+    github = GitHubInfo(event_type="issue")
 
+    # check if the comment is asking wool to format the code
+    comment_contents = github.payload["comment"]["body"]
+    if comment_contents.lower() not in ASK_FOR_FORMAT_COMMIT:
+        return
+
+    black_output = run_black(github, diff_only=False)
     if not black_output:
         print("No changes to commit")
         return
@@ -315,3 +342,8 @@ def commit_pr():
         return
 
     print("Pushed commit {} to branch {}".format(new_commit_sha, branch_name))
+
+    # manually trigger comment update and status check, since wool's
+    # commits don't trigger the pull_request workflow
+    sleep(3)  # wait for the commit to show up in GitHub...
+    comment_on_pr(github)
