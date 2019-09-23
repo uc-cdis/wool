@@ -2,7 +2,7 @@
 
 Utility binaries for linting python code using [black](https://github.com/ambv/black).
 
-## Automatically Comment GitHub PRs with Travis
+## Automatically Comment on GitHub PRs with Travis
 
 Wool can be automated using Travis to automatically comment on GitHub pull
 requests to suggest formatting changes.
@@ -50,8 +50,7 @@ This PR contains code that is not formatted correctly according to [`black`](htt
 This formatting comment was generated automatically by a script in [uc-cdis/wool](https://github.com/uc-cdis/wool).
 ````
 
-## Automatically Comment GitHub PRs with a GitHub action workflow
-
+## Automatically Comment on GitHub PRs with a GitHub action workflow
 
 Wool can be added as an action in a GitHub action workflow to automatically comment on GitHub pull
 requests to suggest formatting changes.
@@ -59,17 +58,49 @@ requests to suggest formatting changes.
 ```
 on: pull_request
 
-name: Run python formatter
+name: Wool
 
 jobs:
   runWool:
-    name: Run wool
+    name: Run black
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
 
-    - name: Run wool
-      uses: uc-cdis/wool@master
+    - uses: uc-cdis/wool@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+
+## Automatically Commit on GitHub PRs with a GitHub action workflow
+
+Wool can be added as an action in a GitHub action workflow to make formatting commits on pull requests. Users can request a formatting commit by commenting "wool", "black" or "please format my code" on a pull request.
+
+```
+on:
+  issue_comment:
+    types: [created, edited]
+
+name: Wool
+
+jobs:
+  runWool:
+    name: Auto format
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+
+    - uses: uc-cdis/wool@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+Commenting and committing can be enabled in a single workflow by using:
+
+```
+on:
+  pull_request:
+  issue_comment:
+    types: [created, edited]
 ```
