@@ -143,7 +143,7 @@ def run_black(github, diff_only):
     python_files = [f for f in files if f["filename"].endswith(".py")]
     if not python_files:
         print("no python files to check")
-        return
+        return {}
     files_str = "\n".join("    {}".format(f["filename"]) for f in files)
     print("checking files:\n{}".format(files_str))
 
