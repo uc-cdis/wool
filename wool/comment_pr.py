@@ -168,7 +168,7 @@ def run_black(github, diff_only):
             [black_command],
             shell=True,
             input=raw_contents,
-            encoding="ascii",
+            encoding="utf-8",
             stdout=subprocess.PIPE,
         )
 
