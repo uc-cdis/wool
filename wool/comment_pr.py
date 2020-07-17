@@ -135,7 +135,8 @@ def run_black(github, diff_only):
     if not isinstance(files, list):
         print(files)
         raise Exception("Unable to get PR files")
-    files_raw_urls = [file_info["raw_url"] for file_info in files]
+    files_contents_urls = [file_info["contents_url"] for file_info in files]
+    files_raw_urls = [file_contents_info["download_url"] for file_contents_info in files]
     files_raw_contents = [
         requests.get(url, headers=github.headers).text for url in files_raw_urls
     ]
@@ -152,12 +153,7 @@ def run_black(github, diff_only):
     for file_info in python_files:
         filename = file_info["filename"]
         raw_url = file_info["raw_url"]
-        response = requests.get(
-            raw_url,
-            headers= {
-                "Authorization": "token {}".format(os.environ["GITHUB_TOKEN"])
-            }
-        )
+        response = requests.get(raw_url, headers=github.headers)
         if response.status_code != 200:
             raise Exception(
                 "Unable to get file `{}` at `{}`: got code {}.".format(
