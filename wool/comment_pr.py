@@ -136,7 +136,7 @@ def run_black(github, diff_only):
         print(files)
         raise Exception("Unable to get PR files")
     files_contents_urls = [file_info["contents_url"] for file_info in files]
-    files_raw_urls = [file_contents_info["download_url"] for file_contents_info in files]
+    files_raw_urls = [file_contents_info["download_url"] for file_contents_info in files_contents_urls]
     files_raw_contents = [
         requests.get(url, headers=github.headers).text for url in files_raw_urls
     ]
