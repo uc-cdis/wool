@@ -152,7 +152,9 @@ def run_black(github, diff_only):
     for file_info in python_files:
         filename = file_info["filename"]
         raw_url = file_info["raw_url"]
-        response = requests.get('{}?token={}'.format(raw_url, github.github_token), headers=github.headers)
+        response = requests.get(
+            "{}?token={}".format(raw_url, github.github_token), headers=github.headers
+        )        
         if response.status_code != 200:
             raise Exception(
                 "Unable to get file `{}` at `{}`: got code {}.".format(
