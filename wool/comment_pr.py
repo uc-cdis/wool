@@ -139,6 +139,7 @@ def run_black(github, diff_only):
     contents_url_outputs = [
         requests.get(contents_url, headers=github.headers).text for contents_url in files_contents_urls
     ]
+    print(contents_url_outputs)
     files_raw_urls = [file_contents_info["download_url"] for file_contents_info in contents_url_outputs]
     files_raw_contents = [
         requests.get(url, headers=github.headers).text for url in files_raw_urls
