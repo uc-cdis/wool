@@ -149,12 +149,12 @@ def run_black(github, diff_only):
         filename = file_info["filename"]
         contents_url = file_info["contents_url"]
         contents_url_info = requests.get(contents_url, headers=github.headers).json()
-        raw_url = contents_url_info["download_url"]
-        response = requests.get(raw_url, headers=github.headers)
+        download_url = contents_url_info["download_url"]
+        response = requests.get(download_url, headers=github.headers)
         if response.status_code != 200:
             raise Exception(
                 "Unable to get file `{}` at `{}`: got code {}.".format(
-                    filename, raw_url, response.status_code
+                    filename, download_url[:download_url.index("token")], response.status_code
                 )
             )
         raw_contents = response.text
