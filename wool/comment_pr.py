@@ -154,7 +154,9 @@ def run_black(github, diff_only):
         if response.status_code != 200:
             raise Exception(
                 "Unable to get file `{}` at `{}`: got code {}.".format(
-                    filename, download_url[:download_url.index("token")], response.status_code
+                    filename,
+                    download_url[:download_url.index("token")],
+                    response.status_code,
                 )
             )
         raw_contents = response.text
