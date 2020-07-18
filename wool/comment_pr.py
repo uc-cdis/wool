@@ -155,7 +155,7 @@ def run_black(github, diff_only):
             raise Exception(
                 "Unable to get file `{}` at `{}`: got code {}.".format(
                     filename,
-                    download_url[:download_url.index("token")],
+                    download_url[: download_url.index("token")],
                     response.status_code,
                 )
             )
