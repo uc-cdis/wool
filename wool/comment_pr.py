@@ -44,7 +44,7 @@ def black_comment_text(black_output):
         return (
             "This PR contains code that is not formatted correctly according"
             " to [`black`](https://github.com/ambv/black). Run `black` on your"
-            ' code before merging.\n"
+            " code before merging.\n"
             "\n"
             "<details>\n"
             "<summary>Expand the full diff to see formatting changes</summary>\n"
