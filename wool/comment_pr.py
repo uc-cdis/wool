@@ -188,11 +188,11 @@ def comment_on_pr(github=None):
 
     output = []
     write = output.append
-    status = "success"  # switch to failure if diff found
+    lint_success = True  # switch to failure if diff found
     for filename, black_diff in black_output.items():
         black_output = "\n".join(black_diff.split("\n")[2:])
         if black_output:
-            status = "failure"
+            lint_success = False
             write("--- {}".format(filename))
             write("+++ blackened")
             write(black_output)
@@ -201,14 +201,11 @@ def comment_on_pr(github=None):
     comment_body = black_comment_text(full_output)
     comments_info = requests.get(github.comments_url, headers=github.headers).json()
     old_comment = find_old_comment(comments_info)
-    status_target_url = None
     if not old_comment:
         response = requests.post(
             github.comments_url, json={"body": comment_body}, headers=github.headers
         )
-        if response.status_code == 201:
-            status_target_url = response.json()["html_url"]
-        else:
+        if response.status_code != 201:
             print("failed to write comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
     else:
@@ -216,43 +213,14 @@ def comment_on_pr(github=None):
         response = requests.patch(
             old_comment_url, json={"body": comment_body}, headers=github.headers
         )
-        if response.status_code == 200:
-            status_target_url = old_comment["html_url"]
-        else:
+        if response.status_code != 200:
             print("failed to edit comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
 
-    if not status_target_url:
-        # we couldn't post a comment, so write output in terminal
+    if not lint_success:
+        # write output in terminal in addition to commenting
         print(f"\nBlack output:\n{full_output}\n")
-
-        # we won't be able to add a separate status check
-        # without `status_target_url`, so exit early
-        if status == "success":
-            return
-        else:
-            exit(1)
-
-    # add status check to the pull request
-    pr_info = requests.get(github.pr_url, headers=github.headers).json()
-    status_url = github.base_url + "/statuses/{}".format(pr_info["head"]["sha"])
-    description = "Very stylish" if status == "success" else "Needs formatting"
-    status_body = {
-        "state": status,
-        "target_url": status_target_url,
-        "description": description,
-        "context": "wool",
-    }
-    response = requests.post(status_url, json=status_body, headers=github.headers)
-    if response.status_code != 201:
-        print(f"failed to add status check ({status_url})", file=sys.stderr)
-        print(response.json(), file=sys.stderr)
-
-        # if the black check failed and we can't add a separate failing
-        # PR status check, fail the current script. if the black check
-        # succeeded, we're good
-        if status != "success":
-            exit(1)
+        exit(1)  # fail the wool check
 
 
 def commit_on_pr():
