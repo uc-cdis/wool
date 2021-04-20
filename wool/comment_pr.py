@@ -80,7 +80,9 @@ def find_old_comment(comments_info):
 class GitHubInfo(object):
     def __init__(self, event_type):
         try:
-            self.github_token = os.environ["GITHUB_TOKEN"]
+            self.github_token = os.environ.get("GITHUB_TOKEN")
+            if not self.github_token:
+                print("WARNING: no GITHUB_TOKEN. Proceeding anyway")
             # if run in a github workflow this file should exist. otherwise
             # we assume there will be environment variables specifying the
             # repository and PR number
@@ -186,11 +188,11 @@ def comment_on_pr(github=None):
 
     output = []
     write = output.append
-    status = "success"  # switch to failure if diff found
+    lint_success = True  # switch to failure if diff found
     for filename, black_diff in black_output.items():
         black_output = "\n".join(black_diff.split("\n")[2:])
         if black_output:
-            status = "failure"
+            lint_success = False
             write("--- {}".format(filename))
             write("+++ blackened")
             write(black_output)
@@ -199,7 +201,6 @@ def comment_on_pr(github=None):
     comment_body = black_comment_text(full_output)
     comments_info = requests.get(github.comments_url, headers=github.headers).json()
     old_comment = find_old_comment(comments_info)
-    status_target_url = None
     if not old_comment:
         response = requests.post(
             github.comments_url, json={"body": comment_body}, headers=github.headers
@@ -207,8 +208,6 @@ def comment_on_pr(github=None):
         if response.status_code != 201:
             print("failed to write comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
-            return
-        status_target_url = response.json()["html_url"]
     else:
         old_comment_url = old_comment.get("url")
         response = requests.patch(
@@ -217,24 +216,11 @@ def comment_on_pr(github=None):
         if response.status_code != 200:
             print("failed to edit comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
-            return
-        status_target_url = old_comment["html_url"]
 
-    # add status check to the pull request
-    pr_info = requests.get(github.pr_url, headers=github.headers).json()
-    status_url = github.base_url + "/statuses/{}".format(pr_info["head"]["sha"])
-    description = "Very stylish" if status == "success" else "Needs formatting"
-    status_body = {
-        "state": status,
-        "target_url": status_target_url,
-        "description": description,
-        "context": "wool",
-    }
-    response = requests.post(status_url, json=status_body, headers=github.headers)
-    if response.status_code != 201:
-        print(f"failed to add status check ({status_url})", file=sys.stderr)
-        print(response.json(), file=sys.stderr)
-        return
+    if not lint_success:
+        # write output in terminal in addition to commenting
+        print(f"\nBlack output:\n{full_output}\n")
+        exit(1)  # fail the wool check
 
 
 def commit_on_pr():
