@@ -80,7 +80,9 @@ def find_old_comment(comments_info):
 class GitHubInfo(object):
     def __init__(self, event_type):
         try:
-            self.github_token = os.environ["GITHUB_TOKEN"]
+            self.github_token = os.environ.get("GITHUB_TOKEN")
+            if not self.github_token:
+                print("WARNING: no GITHUB_TOKEN. Proceeding anyway")
             # if run in a github workflow this file should exist. otherwise
             # we assume there will be environment variables specifying the
             # repository and PR number
@@ -204,21 +206,32 @@ def comment_on_pr(github=None):
         response = requests.post(
             github.comments_url, json={"body": comment_body}, headers=github.headers
         )
-        if response.status_code != 201:
+        if response.status_code == 201:
+            status_target_url = response.json()["html_url"]
+        else:
             print("failed to write comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
-            return
-        status_target_url = response.json()["html_url"]
     else:
         old_comment_url = old_comment.get("url")
         response = requests.patch(
             old_comment_url, json={"body": comment_body}, headers=github.headers
         )
-        if response.status_code != 200:
+        if response.status_code == 200:
+            status_target_url = old_comment["html_url"]
+        else:
             print("failed to edit comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
+
+    if not status_target_url:
+        # we couldn't post a comment, so write output in terminal
+        print(f"\nBlack output:\n{full_output}\n")
+
+        # we won't be able to add a separate status check
+        # without `status_target_url`, so exit early
+        if status == "success":
             return
-        status_target_url = old_comment["html_url"]
+        else:
+            exit(1)
 
     # add status check to the pull request
     pr_info = requests.get(github.pr_url, headers=github.headers).json()
@@ -234,7 +247,12 @@ def comment_on_pr(github=None):
     if response.status_code != 201:
         print(f"failed to add status check ({status_url})", file=sys.stderr)
         print(response.json(), file=sys.stderr)
-        return
+
+        # if the black check failed and we can't add a separate failing
+        # PR status check, fail the current script. if the black check
+        # succeeded, we're good
+        if status != "success":
+            exit(1)
 
 
 def commit_on_pr():
