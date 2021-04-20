@@ -217,7 +217,9 @@ def comment_on_pr(github=None):
             print("failed to edit comment", file=sys.stderr)
             print(response.json(), file=sys.stderr)
 
-    if not lint_success:
+    if lint_success:
+        print("Nothing to report!")
+    else:
         # write output in terminal in addition to commenting
         print(f"\nBlack output:\n{full_output}\n")
         exit(1)  # fail the wool check
