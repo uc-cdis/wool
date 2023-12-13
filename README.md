@@ -12,16 +12,16 @@ as well, for example python 2.7, but these ones must be present for it to
 work):
 ```
 python:
-  - "3.6"
+  - "3.9"
 
 env:
   - REPOSITORY="<username>/<repository>" PR_NUMBER="$TRAVIS_PULL_REQUEST"
 
 install:
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.6 ]]; then pip install -e git+https://git@github.com/uc-cdis/wool.git#egg=wool; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.9 ]]; then pip install -e git+https://git@github.com/uc-cdis/wool.git#egg=wool; fi
 
 after_script:
-  - if [[ $TRAVIS_PYTHON_VERSION == 3.6 && $PR_NUMBER != false ]]; then wool; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 3.9 && $PR_NUMBER != false ]]; then wool; fi
 ```
 where `<username>/<repository>` in the line `- REPOSITORY=...` is as it is in
 the GitHub URL. For example, for wool this would be `uc-cdis/wool`. Everything

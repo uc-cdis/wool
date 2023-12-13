@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "wool"
+version = "0.1.0"
+description = "auto-linting scripts and github utilities"
+authors = ["CTDS UChicago <cdis@uchicago.edu>"]
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/uc-cdis/wool"
+
+[tool.poetry.dependencies]
+python = ">=3.6,<4"
+black = "*"
+requests = ">=2,<3"
+
+[build-system]
+requires = ["poetry<2"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry.scripts]
+wool = "wool.comment_pr:main"
