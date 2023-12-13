@@ -6,8 +6,9 @@ WORKDIR /wool
 RUN pip install -U pip \
     && pip install -U poetry
 
-COPY poetry.lock pyproject.toml /
-RUN poetry install --no-dev
+RUN python -m venv /env \
+    && . /env/bin/activate \
+    && poetry install --no-dev --no-interaction
 RUN poetry show black
 
-ENTRYPOINT ["wool"]
+ENTRYPOINT ["/env/bin/wool"]
