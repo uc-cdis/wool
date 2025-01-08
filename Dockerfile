@@ -8,7 +8,7 @@ RUN pip install -U pip \
 
 RUN python -m venv /env \
     && . /env/bin/activate \
-    && poetry install --without dev --no-interaction
+    && poetry install --no-interaction
 RUN poetry show black
 
 ENTRYPOINT ["/env/bin/wool"]
