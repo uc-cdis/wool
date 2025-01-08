@@ -12,6 +12,6 @@ jobs:
     steps:
     - uses: actions/checkout@master
 
-    - uses: uc-cdis/wool@master
+    - uses: uc-cdis/wool@fix-no-dev
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
